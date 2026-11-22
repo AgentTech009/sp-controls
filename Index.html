@@ -1,0 +1,1672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no"/>
+<title>SP Controls</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ── AMOLED VOID THEME ── */
+:root {
+  --void:    #000000;
+  --deep:    #050508;
+  --surface: #0a0a0f;
+  --card:    #0e0e14;
+  --lift:    #141420;
+
+  --blood:   #c0392b;
+  --blood2:  #e74c3c;
+  --crimson: rgba(192,57,43,0.15);
+
+  --violet:  #6c3fc7;
+  --violet2: #8b5cf6;
+
+  --dim:     rgba(255,255,255,0.55);
+  --dimmer:  rgba(255,255,255,0.22);
+  --faint:   rgba(255,255,255,0.07);
+
+  --border:  rgba(255,255,255,0.06);
+  --bsub:    rgba(192,57,43,0.12);
+
+  --text:    rgba(255,255,255,0.88);
+  --sub:     rgba(255,255,255,0.42);
+
+  --r: 16px; --rsm: 11px; --rxs: 8px;
+  --font: 'Space Grotesk', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; }
+body {
+  min-height: 100%;
+  font-family: var(--font);
+  background: var(--void);
+  color: var(--text);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  /* GPU layer for smooth scroll */
+  -webkit-transform: translateZ(0);
+}
+
+/* ── BACKGROUND: static, zero repaints ── */
+.bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  /* Single gradient, no animation, AMOLED black */
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 20%, rgba(108,63,199,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 35% at 80% 80%, rgba(192,57,43,0.06) 0%, transparent 55%),
+    #000;
+  /* Subtle scanline texture via CSS only */
+  background-size: 100% 100%, 100% 100%, auto;
+}
+
+/* ── INTRO ── */
+#intro {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  will-change: opacity;
+}
+#intro.fade-out {
+  animation: intro-fade 0.5s ease forwards;
+}
+@keyframes intro-fade {
+  to { opacity: 0; pointer-events: none; }
+}
+
+.intro-eye {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 1px solid rgba(192,57,43,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  /* Single box-shadow, no animation stacking */
+  box-shadow: 0 0 40px rgba(192,57,43,0.15), inset 0 0 20px rgba(0,0,0,0.8);
+}
+.intro-eye::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  border: 1px solid rgba(192,57,43,0.15);
+}
+.intro-pupil {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #ff6b6b, #c0392b 50%, #3a0a0a);
+  box-shadow: 0 0 16px rgba(192,57,43,0.8);
+  animation: pupil-pulse 2s ease-in-out infinite;
+}
+@keyframes pupil-pulse {
+  0%,100% { transform: scale(1); box-shadow: 0 0 16px rgba(192,57,43,0.8); }
+  50%      { transform: scale(1.1); box-shadow: 0 0 28px rgba(192,57,43,1), 0 0 50px rgba(192,57,43,0.3); }
+}
+
+.intro-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 6px;
+  color: rgba(192,57,43,0.45);
+  text-transform: uppercase;
+  margin-top: 28px;
+}
+.intro-track {
+  width: 120px;
+  height: 1px;
+  background: rgba(255,255,255,0.04);
+  margin-top: 14px;
+  overflow: hidden;
+}
+.intro-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, rgba(108,63,199,0.8), var(--blood2));
+  transition: width 0.15s linear;
+}
+.intro-msg {
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 3px;
+  color: rgba(255,255,255,0.15);
+  margin-top: 10px;
+  text-transform: uppercase;
+  min-height: 12px;
+}
+
+/* ── PAGE ── */
+#page {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding-bottom: 80px;
+  opacity: 0;
+  pointer-events: none;
+  /* No transition here — JS sets it */
+}
+#page.visible {
+  opacity: 1;
+  pointer-events: all;
+  animation: page-in 0.4s ease forwards;
+}
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── HEADER ── */
+#site-head {
+  width: 100%;
+  max-width: 400px;
+  padding: 24px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.top-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.top-ver {
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 4px;
+  color: rgba(192,57,43,0.30);
+  text-transform: uppercase;
+}
+#hBtn {
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  background: rgba(192,57,43,0.06);
+  border: 1px solid rgba(192,57,43,0.18);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s;
+}
+#hBtn.on { opacity: 1; pointer-events: all; }
+#hBtn svg { width: 11px; height: 11px; stroke: var(--blood2); stroke-width: 2; fill: none; }
+
+/* ── ORB ── */
+.orb-wrap {
+  position: relative;
+  width: 110px; height: 110px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  margin-bottom: 4px;
+  /* composited layer */
+  will-change: transform;
+  -webkit-transform: translateZ(0);
+}
+
+/* Single pulse ring — not 3 */
+.orb-ring {
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  border: 1px solid rgba(192,57,43,0.10);
+  animation: orb-ring 3.5s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes orb-ring {
+  0%   { opacity: 0.5; transform: scale(0.9); }
+  100% { opacity: 0;   transform: scale(1.1); }
+}
+
+.orb {
+  width: 84px; height: 84px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.12) 0%, transparent 40%),
+    radial-gradient(circle at 65% 65%, rgba(192,57,43,0.12) 0%, transparent 45%),
+    #0a0005;
+  border: 1px solid rgba(192,57,43,0.25);
+  box-shadow: 0 0 30px rgba(192,57,43,0.08), 0 16px 40px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.08);
+  display: flex; align-items: center; justify-content: center;
+  /* Only transform on active — no breathe animation (saves GPU) */
+  transition: transform 0.1s ease, box-shadow 0.25s ease;
+  -webkit-transform: translateZ(0);
+  overflow: hidden;
+  isolation: isolate;
+}
+.orb:active { transform: scale(0.9) !important; }
+.orb.open {
+  border-color: rgba(192,57,43,0.40);
+  box-shadow: 0 0 50px rgba(192,57,43,0.14), 0 16px 40px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+.orb-core {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff8888, var(--blood2) 50%, #3a0000);
+  box-shadow: 0 0 14px var(--blood), 0 0 28px rgba(192,57,43,0.35);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.orb.open .orb-core {
+  background: radial-gradient(circle at 35% 30%, #fff, rgba(192,57,43,0.9) 45%, #1a0000);
+  box-shadow: 0 0 18px var(--blood2), 0 0 40px rgba(231,76,60,0.4);
+}
+.orb-hint {
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 4px;
+  color: var(--dimmer);
+  margin-top: 6px;
+  transition: color 0.25s;
+}
+.orb-hint.open { color: rgba(192,57,43,0.5); }
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 5px;
+  color: rgba(192,57,43,0.30);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+.etitle {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: rgba(255,255,255,0.90);
+  /* No text gradient — causes compositing */
+}
+.estatus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 2px;
+  color: var(--dimmer);
+}
+.sled {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--blood2);
+  box-shadow: 0 0 6px var(--blood2);
+  animation: blink 3s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+.sep {
+  width: 100%;
+  max-width: 400px;
+  margin: 12px 0 6px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(192,57,43,0.12), transparent);
+}
+
+/* ── SHELL ── */
+.shell {
+  width: 100%;
+  max-width: 400px;
+  padding: 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+/* ── COLLAPSIBLE WRAPPER ── */
+.cw {
+  max-height: 0;
+  overflow: hidden;
+  /* opacity transition only — no layout thrash */
+  opacity: 0;
+  transition: max-height 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease;
+}
+.cw.open { max-height: 2000px; opacity: 1; }
+
+/* ── PANEL ── */
+.panel {
+  width: 100%;
+  border-radius: var(--r);
+  padding: 13px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  /* NO backdrop-filter — kills mid-range phones */
+  box-shadow: 0 4px 20px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.03);
+  contain: layout style;
+}
+.plbl {
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 4px;
+  color: rgba(192,57,43,0.30);
+  text-align: center;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+/* ── GRID ── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+/* ── TILES ── */
+.tile {
+  border-radius: var(--rsm);
+  padding: 13px 11px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  /* GPU-only transitions */
+  transition: transform 0.08s ease, opacity 0.08s ease;
+  will-change: transform;
+  -webkit-transform: translateZ(0);
+  position: relative;
+  overflow: hidden;
+  contain: layout style;
+}
+.tile:active {
+  transform: scale(0.93) !important;
+  opacity: 0.8;
+}
+.tile.wide { grid-column: 1 / -1; }
+
+/* Accent colors — border only, no bg change (avoids repaints) */
+.tile.t-blood  { border-color: rgba(192,57,43,0.12); }
+.tile.t-violet { border-color: rgba(108,63,199,0.12); }
+.tile.t-dim    { border-color: rgba(255,255,255,0.07); }
+
+.ti { font-size: 16px; line-height: 1; }
+.tn { font-size: 12px; font-weight: 600; color: var(--text); }
+.ts { font-family: var(--mono); font-size: 7px; color: var(--dimmer); letter-spacing: 1.5px; }
+
+/* Toggle on */
+.tile.toggled-on {
+  background: rgba(192,57,43,0.08) !important;
+  border-color: rgba(192,57,43,0.30) !important;
+}
+.tile.toggled-on .tn { color: var(--blood2); }
+.tile.toggled-on .ts { color: rgba(192,57,43,0.45) !important; }
+
+/* ── MPANEL ── */
+.mpanel {
+  width: 100%;
+  border-radius: var(--r);
+  padding: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  contain: layout style;
+}
+.row { display: flex; gap: 6px; align-items: stretch; }
+.row .btn { flex: 1; }
+
+/* ── BUTTONS ── */
+.btn {
+  width: 100%;
+  border-radius: var(--rsm);
+  padding: 12px 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  cursor: pointer;
+  display: flex; align-items: center; gap: 11px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  transition: transform 0.08s ease, opacity 0.08s ease;
+  will-change: transform;
+  -webkit-transform: translateZ(0);
+  contain: layout style;
+}
+.btn:active { transform: scale(0.97) !important; opacity: 0.75; }
+
+.bi {
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  background: rgba(192,57,43,0.08);
+  border: 1px solid rgba(192,57,43,0.16);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  color: var(--blood2);
+}
+.bm { flex: 1; text-align: left; }
+.bs { font-family: var(--mono); font-size: 7px; color: var(--dimmer); letter-spacing: 1.5px; margin-top: 2px; }
+
+.vbtn {
+  width: 44px; height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--rsm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: transform 0.08s ease, border-color 0.2s;
+  will-change: transform;
+  -webkit-transform: translateZ(0);
+}
+.vbtn:active { transform: scale(0.88) !important; }
+.vbtn.on { border-color: rgba(192,57,43,0.28); }
+.vbtn svg { width: 15px; height: 15px; stroke: var(--sub); stroke-width: 2; fill: none; transition: stroke 0.2s; }
+.vbtn.on svg { stroke: var(--blood2); }
+
+/* ── VOLUME PANEL ── */
+.vpanel {
+  border-radius: var(--rsm);
+  padding: 11px 13px;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(192,57,43,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.vh {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 7px;
+  color: var(--dimmer);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.vv { color: var(--blood2); }
+
+/* ── RANGE SLIDER ── */
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%;
+  background: transparent;
+}
+input[type=range]::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 2px;
+  cursor: pointer;
+  background: linear-gradient(to right, var(--blood2) var(--val,100%), rgba(255,255,255,0.06) var(--val,100%));
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  margin-top: -8px;
+  border-radius: 50%;
+  cursor: pointer;
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.9), rgba(230,130,120,0.8) 50%, rgba(100,20,20,0.8));
+  border: 1px solid rgba(192,57,43,0.5);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.7);
+}
+
+/* ── DRAWER ── */
+.drawer-inner {
+  border-radius: var(--r);
+  padding: 13px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.7);
+  contain: layout style;
+}
+.dlbl {
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: 4px;
+  color: rgba(192,57,43,0.40);
+  margin-bottom: 9px;
+  display: flex; align-items: center; gap: 6px;
+  text-transform: uppercase;
+}
+.ddot {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--blood2);
+  box-shadow: 0 0 6px var(--blood);
+  animation: blink 2s ease-in-out infinite;
+}
+textarea {
+  width: 100%;
+  height: 70px;
+  resize: none;
+  outline: none;
+  background: rgba(0,0,0,0.6);
+  border-radius: var(--rxs);
+  border: 1px solid rgba(192,57,43,0.10);
+  padding: 9px 12px;
+  color: rgba(255,255,255,0.85);
+  font-family: var(--font);
+  font-size: 13px;
+  caret-color: var(--blood2);
+  transition: border-color 0.2s;
+}
+textarea::placeholder { color: rgba(255,255,255,0.10); }
+textarea:focus { border-color: rgba(192,57,43,0.28); }
+
+.txbtn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: var(--rxs);
+  cursor: pointer;
+  background: rgba(192,57,43,0.07);
+  border: 1px solid rgba(192,57,43,0.22);
+  color: var(--blood2);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 3.5px;
+  transition: transform 0.08s ease, opacity 0.08s ease;
+  will-change: transform;
+  -webkit-transform: translateZ(0);
+}
+.txbtn:active { transform: scale(0.97) !important; opacity: 0.7; }
+
+/* ── COMMAND INPUT ── */
+.cmd-row { display: flex; gap: 6px; align-items: stretch; }
+#cInput, #aInput {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  outline: none;
+  background: rgba(0,0,0,0.6);
+  border-radius: var(--rxs);
+  border: 1px solid rgba(192,57,43,0.10);
+  padding: 0 12px;
+  color: rgba(255,255,255,0.85);
+  font-family: var(--mono);
+  font-size: 12px;
+  caret-color: var(--blood2);
+  user-select: text;
+  -webkit-user-select: text;
+  transition: border-color 0.2s;
+}
+#cInput::placeholder, #aInput::placeholder { color: rgba(255,255,255,0.12); }
+#cInput:focus, #aInput:focus { border-color: rgba(192,57,43,0.28); }
+.cmd-send {
+  width: 44px; height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--rxs);
+  cursor: pointer;
+  background: rgba(192,57,43,0.07);
+  border: 1px solid rgba(192,57,43,0.22);
+  color: var(--blood2);
+  font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.08s ease, opacity 0.08s ease;
+  will-change: transform;
+  -webkit-transform: translateZ(0);
+}
+.cmd-send:active { transform: scale(0.9) !important; opacity: 0.7; }
+
+/* ── COMMAND MENU (Google Sheets) ── */
+.cm-bar { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.cm-status {
+  flex:1; min-width:0; display:flex; align-items:center; gap:7px;
+  font-family:var(--mono); font-size:7.5px; letter-spacing:2px; color:var(--dimmer);
+  text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.cm-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; background:var(--dimmer); }
+.cm-status[data-state="loading"] { color:rgba(108,63,199,0.75); }
+.cm-status[data-state="loading"] .cm-dot { background:var(--violet2); box-shadow:0 0 6px var(--violet); animation:blink 1s ease-in-out infinite; }
+.cm-status[data-state="ok"] { color:rgba(192,57,43,0.60); }
+.cm-status[data-state="ok"] .cm-dot { background:var(--blood2); box-shadow:0 0 6px var(--blood); }
+.cm-status[data-state="offline"] { color:rgba(255,255,255,0.45); }
+.cm-status[data-state="offline"] .cm-dot { background:rgba(255,255,255,0.45); }
+.cm-status[data-state="error"] { color:var(--blood2); }
+.cm-status[data-state="error"] .cm-dot { background:var(--blood2); box-shadow:0 0 8px var(--blood2); }
+.cm-refresh { width:34px; height:34px; font-size:16px; }
+.cm-refresh.spin { animation:cm-spin 0.8s linear infinite; }
+@keyframes cm-spin { to { transform:rotate(360deg); } }
+.cm-msg { margin-top:10px; padding:12px; border-radius:var(--rsm); background:rgba(0,0,0,0.5); border:1px solid rgba(192,57,43,0.08); font-family:var(--mono); font-size:9px; letter-spacing:1.5px; color:var(--dimmer); text-align:center; line-height:1.6; }
+.cm-cat { margin-top:8px; }
+.cm-cat-h {
+  display:flex; align-items:center; justify-content:space-between; padding:8px 2px 7px; cursor:pointer;
+  font-family:var(--mono); font-size:7px; letter-spacing:4px; color:rgba(192,57,43,0.45); text-transform:uppercase;
+  border-bottom:1px solid rgba(192,57,43,0.08); margin-bottom:7px;
+}
+.cm-cat-h .cm-n { color:var(--dimmer); letter-spacing:2px; }
+.cm-cat-h .cm-chev { display:inline-block; margin-left:8px; transition:transform 0.2s ease; }
+.cm-cat.collapsed .cm-chev { transform:rotate(-90deg); }
+.cm-cat.collapsed .cm-grid { display:none; }
+.cm-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.cm-grid .tile { will-change:auto; padding:11px 10px; }
+.cm-grid .tn, .cm-grid .ts { overflow-wrap:anywhere; }
+
+/* ── STATUS BAR ── */
+#sbar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+  padding: 8px 16px 18px;
+  background: linear-gradient(to top, #000 60%, transparent 100%);
+  pointer-events: none;
+}
+.spill {
+  padding: 7px 22px;
+  border-radius: 100px;
+  background: rgba(5,5,8,0.92);
+  border: 1px solid rgba(192,57,43,0.15);
+  font-family: var(--mono);
+  font-size: 7.5px;
+  letter-spacing: 2.5px;
+  color: rgba(192,57,43,0.50);
+  display: flex; align-items: center; gap: 8px;
+}
+.spill::before {
+  content: '';
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--blood);
+  box-shadow: 0 0 6px var(--blood);
+  animation: blink 3s ease-in-out infinite;
+}
+
+/* ── RIPPLE ── Only transform/opacity, GPU-only */
+.rpl {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%,-50%) scale(0);
+  animation: rpl-a 0.5s ease-out forwards;
+  will-change: transform, opacity;
+}
+@keyframes rpl-a { to { transform: translate(-50%,-50%) scale(5); opacity: 0; } }
+.rpl-blood  { border: 1px solid rgba(192,57,43,0.35);  width: 28px; height: 28px; }
+.rpl-violet { border: 1px solid rgba(108,63,199,0.35); width: 28px; height: 28px; }
+.rpl-dim    { border: 1px solid rgba(255,255,255,0.12); width: 28px; height: 28px; }
+
+/* ── DIVIDER ── */
+.divider { height: 1px; background: rgba(255,255,255,0.04); margin: 1px 0; }
+
+/* ── SCREEN FLASH ── GPU-only, pointer-events off */
+#fx {
+  position: fixed;
+  inset: 0;
+  z-index: 8000;
+  pointer-events: none;
+  opacity: 0;
+  border-radius: 0;
+}
+#fx.fx-blood {
+  background: radial-gradient(ellipse at center, rgba(192,57,43,0.22) 0%, rgba(192,57,43,0.06) 55%, transparent 100%);
+  animation: fx-pop 0.45s ease-out forwards;
+}
+#fx.fx-violet {
+  background: radial-gradient(ellipse at center, rgba(108,63,199,0.20) 0%, rgba(108,63,199,0.05) 55%, transparent 100%);
+  animation: fx-pop 0.45s ease-out forwards;
+}
+#fx.fx-white {
+  background: radial-gradient(ellipse at center, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.02) 55%, transparent 100%);
+  animation: fx-pop 0.30s ease-out forwards;
+}
+/* Camera shoot — full blinding strobe */
+#fx.fx-shoot {
+  background: #ffffff;
+  animation: fx-shoot 0.55s cubic-bezier(0.0, 0.0, 0.2, 1) forwards;
+}
+@keyframes fx-shoot {
+  0%   { opacity: 1; }
+  12%  { opacity: 0.92; }   /* hold white */
+  35%  { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+/* Edge bleed variant — bleeds in from all 4 edges simultaneously */
+#fx.fx-blood::before, #fx.fx-violet::before, #fx.fx-white::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  animation: fx-edge 0.45s ease-out forwards;
+}
+#fx.fx-blood::before  { box-shadow: inset 0 0 40px rgba(192,57,43,0.18); }
+#fx.fx-violet::before { box-shadow: inset 0 0 40px rgba(108,63,199,0.15); }
+#fx.fx-white::before  { box-shadow: inset 0 0 30px rgba(255,255,255,0.08); }
+
+@keyframes fx-pop {
+  0%   { opacity: 1; transform: scale(0.92); }
+  18%  { opacity: 1; transform: scale(1.0); }
+  100% { opacity: 0; transform: scale(1.04); }
+}
+@keyframes fx-edge {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+::-webkit-scrollbar { width: 0; }
+</style>
+</head>
+<body>
+
+<div class="bg"></div>
+<div id="fx"></div>
+
+<!-- INTRO -->
+<div id="intro">
+  <div class="intro-eye">
+    <div class="intro-pupil" id="introPupil"></div>
+  </div>
+  <div class="intro-label">SP Controls</div>
+  <div class="intro-track"><div class="intro-fill" id="iBar"></div></div>
+  <div class="intro-msg" id="iMsg">Awaiting...</div>
+</div>
+
+<!-- STATUS BAR -->
+<div id="sbar"><div class="spill"><span id="stxt">STANDING BY</span></div></div>
+
+<!-- PAGE -->
+<div id="page">
+  <div id="site-head">
+    <div class="top-bar">
+      <div class="top-ver">SP Controls v2.4</div>
+      <div id="hBtn" onclick="sendBlank(event)">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M19.07 4.93l-1.41 1.41M5.34 17.66l-1.41 1.41"/></svg>
+      </div>
+    </div>
+
+    <div class="orb-wrap" id="mainOrbWrap" onclick="toggleGrid(event)">
+      <div class="orb-ring"></div>
+      <div class="orb" id="mainOrb"><div class="orb-core"></div></div>
+    </div>
+    <div class="orb-hint" id="orbHint">TAP TO EXPAND</div>
+
+    <div style="text-align:center;margin-top:10px">
+      <div class="eyebrow">All Systems Online</div>
+      <div class="etitle">SP CONTROLS</div>
+      <div class="estatus"><span class="sled"></span>ALL NODES ACTIVE</div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="shell">
+
+    <!-- NODE COMMANDS -->
+    <div class="cw" id="gridWrap">
+      <div class="panel">
+        <div class="plbl">Node Commands</div>
+        <div class="grid">
+          <div class="tile t-dim wide" onclick="handleSpeak(event)">
+            <div class="ti">◎</div><div class="tn">Speak</div><div class="ts">VOICE TRANSMIT</div>
+          </div>
+          <div class="tile t-blood" id="tileTorch" onclick="cmdToggle('Torch',event,'torch','tileTorch','torchState')">
+            <div class="ti">🔦</div><div class="tn">Torch</div><div class="ts" id="torchSub">TOGGLE LIGHT</div>
+          </div>
+          <div class="tile t-blood" onclick="cmd('Reboot',event,'reboot')">
+            <div class="ti">↺</div><div class="tn">Reboot</div><div class="ts">RESTART NODE</div>
+          </div>
+          <div class="tile t-violet" onclick="cmd('trb',event,'trb')">
+            <div class="ti">⚡</div><div class="tn">trb</div><div class="ts">TRIGGER MACRO</div>
+          </div>
+          <div class="tile t-blood" onclick="cmd('Screen off',event,'screenOff')">
+            <div class="ti">◌</div><div class="tn">Screen Off</div><div class="ts">DISPLAY SLEEP</div>
+          </div>
+          <div class="tile t-dim" onclick="cmd('Screen on',event,'screenOn')">
+            <div class="ti">◉</div><div class="tn">Screen On</div><div class="ts">DISPLAY WAKE</div>
+          </div>
+          <div class="tile t-dim" onclick="cmd('Home',event,'home')">
+            <div class="ti">⌂</div><div class="tn">Home</div><div class="ts">NAV HOME</div>
+          </div>
+          <div class="tile t-blood" onclick="toggleCam(event)">
+            <div class="ti">◑</div><div class="tn">Camera</div><div class="ts">OPEN LENS</div>
+          </div>
+        </div>
+
+        <!-- CAM CONTROLS -->
+        <div class="cw" id="camWrap" style="margin-top:7px">
+          <div class="plbl" style="margin-top:2px">Cam Controls</div>
+          <div class="grid">
+            <div class="tile t-dim" onclick="cam('Left swipe',event,'camNavLeft')">
+              <div class="ti">⇠</div><div class="tn">Left Swipe</div><div class="ts">CAM NAV</div>
+            </div>
+            <div class="tile t-dim" onclick="cam('Right swipe',event,'camNavRight')">
+              <div class="ti">⇢</div><div class="tn">Right Swipe</div><div class="ts">CAM NAV</div>
+            </div>
+            <div class="tile t-blood" onclick="cam('Flip',event,'camFlip')">
+              <div class="ti">⟳</div><div class="tn">Flip</div><div class="ts">SWITCH CAM</div>
+            </div>
+            <div class="tile t-blood" id="tileCamFlash" onclick="camFlashToggleFn(event)">
+              <div class="ti">⚡</div><div class="tn" id="camFlashName">Flash</div><div class="ts" id="camFlashSub">TOGGLE FLASH</div>
+            </div>
+            <div class="tile t-dim wide" onclick="cam('Shoot',event,'camShoot')">
+              <div class="ti">◎</div><div class="tn">Shoot</div><div class="ts">CAPTURE</div>
+            </div>
+            <div class="tile t-violet" id="tileCamToggle" onclick="camToggleFn(event)">
+              <div class="ti">◉</div><div class="tn">Cam Toggle</div><div class="ts">ENABLE/DISABLE</div>
+            </div>
+            <div class="tile t-blood" onclick="toggleCam(event)">
+              <div class="ti">✕</div><div class="tn">Exit Camera</div><div class="ts">COLLAPSE</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SPEAK + VOLUME -->
+    <div class="mpanel">
+      <div class="row">
+        <button class="btn" onclick="toggleSpeak(event)">
+          <div class="bi">◎</div>
+          <div class="bm"><div>Speak from Ecosystem</div><div class="bs">VOICE TRANSMIT</div></div>
+        </button>
+        <div class="vbtn" id="volBtn" onclick="toggleVol(event)">
+          <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+        </div>
+      </div>
+      <div class="cw" id="volWrap">
+        <div class="vpanel">
+          <div class="vh"><span>Voice Volume</span><span class="vv" id="vDis">100%</span></div>
+          <input type="range" id="vSlider" min="0" max="100" value="100" oninput="onVolInput()">
+        </div>
+      </div>
+    </div>
+
+    <!-- TEXT DRAWER -->
+    <div class="cw" id="drawer">
+      <div class="drawer-inner">
+        <div class="dlbl"><div class="ddot"></div>Voice Channel Open</div>
+        <textarea id="tInput" placeholder="Type your transmission..." oninput="playKeyboardTick()"></textarea>
+        <button class="txbtn" onclick="sendText(event)">◈ TRANSMIT</button>
+      </div>
+    </div>
+
+    <!-- COMMAND INPUT -->
+    <div class="drawer-inner">
+      <div class="dlbl"><div class="ddot"></div>Command Input</div>
+      <div class="cmd-row">
+        <input type="text" id="cInput" placeholder="Type a command..." autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" oninput="playKeyboardTick()" onkeydown="if(event.key==='Enter')sendCmdText(event)">
+        <button class="cmd-send" onclick="sendCmdText(event)">➤</button>
+      </div>
+    </div>
+
+    <!-- OPEN APP -->
+    <div class="drawer-inner">
+      <div class="dlbl"><div class="ddot"></div>Open App</div>
+      <div class="cmd-row">
+        <input type="text" id="aInput" placeholder="App name..." autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" oninput="playKeyboardTick()" onkeydown="if(event.key==='Enter')sendAppText(event)">
+        <button class="cmd-send" onclick="sendAppText(event)">➤</button>
+      </div>
+    </div>
+
+    <!-- COMMAND MENU (loaded from Google Sheets CSV) -->
+    <div class="drawer-inner" id="cmPanel">
+      <div class="dlbl"><div class="ddot"></div>Command Menu</div>
+      <div class="cm-bar">
+        <div class="cm-status" id="cmStatus" data-state="loading"><span class="cm-dot"></span><span id="cmStatusTxt">LOADING...</span></div>
+        <button class="cmd-send cm-refresh" id="cmRefresh" onclick="cmRefresh(event)" aria-label="Refresh command list">↻</button>
+      </div>
+      <div id="cmList"></div>
+    </div>
+
+    <div style="height:4px"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  AUDIO ENGINE — lightweight, no memory leaks
+// ═══════════════════════════════════════════════════
+let _ac = null;
+function C() {
+  if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)();
+  if (_ac.state === 'suspended') _ac.resume();
+  return _ac;
+}
+
+let _master = null;
+function M() {
+  if (!_master) {
+    const c = C(), g = c.createGain();
+    g.gain.value = 1.6;
+    g.connect(c.destination);
+    _master = g;
+  }
+  return _master;
+}
+
+function osc(freq, type, dur, vol, atk = 0.008, dec) {
+  try {
+    const c = C(), now = c.currentTime;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.value = freq;
+    o.connect(g); g.connect(M());
+    dec = dec ?? dur;
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(vol, now + atk);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + atk + dec);
+    o.start(now); o.stop(now + atk + dec + 0.02);
+  } catch(e) {}
+}
+
+function sweep(f0, f1, type, dur, vol, atk = 0.01) {
+  try {
+    const c = C(), now = c.currentTime;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, now);
+    o.frequency.exponentialRampToValueAtTime(f1, now + dur);
+    o.connect(g); g.connect(M());
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(vol, now + atk);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    o.start(now); o.stop(now + dur + 0.02);
+  } catch(e) {}
+}
+
+function nz(dur, vol, lo = 300, hi = 4000) {
+  try {
+    const c = C(), now = c.currentTime;
+    const buf = c.createBuffer(1, Math.ceil(c.sampleRate * dur), c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    f.type = 'bandpass'; f.frequency.value = (lo + hi) / 2; f.Q.value = 1.2;
+    src.buffer = buf; src.connect(f); f.connect(g); g.connect(M());
+    g.gain.setValueAtTime(vol, now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    src.start(now); src.stop(now + dur + 0.01);
+  } catch(e) {}
+}
+
+// ── SOUNDS ──
+const S = {
+  orb: (open) => {
+    if (open) {
+      osc(55, 'sine', 0.5, 0.45, 0.005, 0.45);
+      nz(0.02, 0.45, 1000, 5000);
+      setTimeout(() => sweep(180, 520, 'sine', 0.35, 0.35, 0.012), 25);
+      setTimeout(() => osc(840, 'sine', 0.2, 0.20, 0.01), 250);
+    } else {
+      nz(0.015, 0.40, 700, 4000);
+      sweep(480, 130, 'sine', 0.28, 0.32, 0.006);
+      setTimeout(() => osc(75, 'sine', 0.15, 0.38, 0.004, 0.18), 70);
+    }
+  },
+  blank: () => {
+    osc(2100, 'sine', 0.05, 0.30, 0.001, 0.048);
+    setTimeout(() => osc(2100, 'sine', 0.04, 0.15, 0.001, 0.035), 18);
+  },
+  speakOpen: () => {
+    nz(0.06, 0.28, 400, 2500);
+    osc(75, 'sine', 0.10, 0.40, 0.004, 0.09);
+    sweep(260, 800, 'sine', 0.22, 0.32, 0.010);
+    setTimeout(() => osc(1000, 'sine', 0.15, 0.22, 0.007), 140);
+  },
+  speakClose: () => {
+    nz(0.007, 0.35, 900, 7000);
+    sweep(720, 210, 'sine', 0.18, 0.28, 0.003);
+    setTimeout(() => osc(55, 'sine', 0.08, 0.25, 0.003, 0.12), 35);
+  },
+  volToggle: (open) => {
+    if (open) {
+      osc(50, 'sine', 0.20, 0.55, 0.003, 0.18);
+      setTimeout(() => osc(840, 'sine', 0.12, 0.22, 0.007), 50);
+    } else {
+      osc(50, 'sine', 0.16, 0.40, 0.003, 0.16);
+      setTimeout(() => sweep(300, 75, 'sine', 0.14, 0.20, 0.004), 40);
+    }
+  },
+  volTick: () => {
+    try {
+      const c = C(), now = c.currentTime;
+      // Hard detent click — mechanical rotary encoder feel
+      // Layer 1: sharp noise transient (the physical click)
+      const buf = c.createBuffer(1, Math.ceil(c.sampleRate * 0.018), c.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2.5);
+      const src = c.createBufferSource();
+      const hp = c.createBiquadFilter();
+      const g1 = c.createGain();
+      hp.type = 'highpass'; hp.frequency.value = 3500;
+      src.buffer = buf; src.connect(hp); hp.connect(g1); g1.connect(M());
+      g1.gain.setValueAtTime(1.4, now);
+      g1.gain.exponentialRampToValueAtTime(0.0001, now + 0.018);
+      src.start(now); src.stop(now + 0.02);
+      // Layer 2: short tonal body — feels like a metal detent
+      const o = c.createOscillator(), g2 = c.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(1800, now); o.frequency.exponentialRampToValueAtTime(900, now + 0.025);
+      o.connect(g2); g2.connect(M());
+      g2.gain.setValueAtTime(0, now);
+      g2.gain.linearRampToValueAtTime(0.28, now + 0.002);
+      g2.gain.exponentialRampToValueAtTime(0.0001, now + 0.035);
+      o.start(now); o.stop(now + 0.04);
+    } catch(e) {}
+  },
+  typeTick: () => {
+    try {
+      const c = C(), now = c.currentTime;
+      // Mechanical keyboard thock — layered noise body + tonal key
+      // Layer 1: low-mid thock body (the plastic/foam impact)
+      const len = Math.ceil(c.sampleRate * 0.055);
+      const buf = c.createBuffer(1, len, c.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.8);
+      const src = c.createBufferSource();
+      const bp = c.createBiquadFilter();
+      const g1 = c.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = 600 + Math.random() * 200; bp.Q.value = 1.8;
+      src.buffer = buf; src.connect(bp); bp.connect(g1); g1.connect(M());
+      g1.gain.setValueAtTime(0.85 + Math.random() * 0.25, now);
+      g1.gain.exponentialRampToValueAtTime(0.0001, now + 0.055);
+      src.start(now); src.stop(now + 0.06);
+      // Layer 2: high transient snap (the key bottom-out click)
+      const len2 = Math.ceil(c.sampleRate * 0.008);
+      const buf2 = c.createBuffer(1, len2, c.sampleRate);
+      const d2 = buf2.getChannelData(0);
+      for (let i = 0; i < len2; i++) d2[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len2, 3);
+      const src2 = c.createBufferSource();
+      const hp2 = c.createBiquadFilter();
+      const g2 = c.createGain();
+      hp2.type = 'highpass'; hp2.frequency.value = 4000;
+      src2.buffer = buf2; src2.connect(hp2); hp2.connect(g2); g2.connect(M());
+      g2.gain.setValueAtTime(0.55, now);
+      g2.gain.exponentialRampToValueAtTime(0.0001, now + 0.008);
+      src2.start(now); src2.stop(now + 0.01);
+      // Layer 3: subtle pitch — gives each key its own character
+      const pents = [180, 200, 220, 240, 260];
+      const o = c.createOscillator(), g3 = c.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(pents[Math.floor(Math.random() * pents.length)], now);
+      o.connect(g3); g3.connect(M());
+      g3.gain.setValueAtTime(0, now);
+      g3.gain.linearRampToValueAtTime(0.18, now + 0.003);
+      g3.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+      o.start(now); o.stop(now + 0.06);
+    } catch(e) {}
+  },
+  loader: (i) => {
+    const pent = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
+    const f = pent[i] || 523.25;
+    osc(f, 'sine', 0.18, 0.38, 0.005);
+    osc(f * 2, 'sine', 0.14, 0.18, 0.007);
+    if (i === 7) {
+      setTimeout(() => {
+        [523.25, 659.25, 783.99].forEach((fn, j) => setTimeout(() => osc(fn, 'sine', 0.35, 0.45, 0.012, 0.32), j * 55));
+        sweep(240, 2600, 'sine', 0.50, 0.32, 0.015);
+      }, 35);
+    }
+  },
+  wakeSystem: () => {
+    osc(40, 'sine', 0.75, 0.55, 0.04, 0.70);
+    [0,65,130,195,260,325].forEach((t, i) => {
+      const fs = [261.63,329.63,392,523.25,659.25,784];
+      setTimeout(() => osc(fs[i], 'sine', 0.45, 0.40 - i*0.04, 0.007), t);
+    });
+    setTimeout(() => { [523.25,659.25,783.99,1046.5].forEach(f => osc(f, 'sine', 0.50, 0.22, 0.018, 0.45)); sweep(280,2000,'sine',0.35,0.25,0.012); }, 400);
+  },
+  closeSystem: () => {
+    sweep(420, 50, 'sine', 0.60, 0.40, 0.012);
+    osc(55, 'sine', 0.50, 0.45, 0.018, 0.45);
+    nz(0.45, 0.22, 40, 800);
+    setTimeout(() => { nz(0.006, 0.48, 180, 1800); osc(50, 'sine', 0.04, 0.32, 0.002, 0.038); }, 500);
+  },
+  transmitSend: () => {
+    nz(0.015, 0.48, 700, 7000);
+    osc(170, 'sine', 0.04, 0.48, 0.002, 0.032);
+    setTimeout(() => sweep(360, 3000, 'sine', 0.28, 0.40, 0.007), 22);
+    setTimeout(() => { sweep(3000, 850, 'sine', 0.22, 0.25, 0.003); nz(0.07, 0.12, 1800, 7000); }, 170);
+    setTimeout(() => osc(840, 'sine', 0.25, 0.15, 0.009), 300);
+  },
+  camPanelToggle: (open) => {
+    if (open) {
+      nz(0.07, 0.22, 280, 1800);
+      setTimeout(() => { nz(0.009, 0.38, 1800, 7000); sweep(300, 680, 'triangle', 0.12, 0.24, 0.007); }, 65);
+      setTimeout(() => osc(1500, 'sine', 0.07, 0.18, 0.003), 125);
+    } else {
+      sweep(640, 230, 'triangle', 0.10, 0.20, 0.005);
+      setTimeout(() => nz(0.007, 0.35, 1400, 5500), 55);
+    }
+  },
+  torch: () => {
+    nz(0.003, 0.75, 1800, 14000);
+    osc(110, 'sine', 0.007, 0.55, 0.001, 0.006);
+    setTimeout(() => { osc(60, 'sawtooth', 0.25, 0.32, 0.009); osc(120, 'sawtooth', 0.20, 0.24, 0.013); }, 10);
+    setTimeout(() => osc(4000, 'sine', 0.12, 0.15, 0.010), 50);
+  },
+  reboot: () => {
+    sweep(600, 28, 'sawtooth', 0.20, 0.38, 0.003);
+    osc(75, 'sine', 0.05, 0.48, 0.002, 0.048);
+    setTimeout(() => osc(880, 'square', 0.07, 0.38, 0.003, 0.065), 275);
+    setTimeout(() => { sweep(75, 580, 'sine', 0.35, 0.38, 0.015); setTimeout(() => osc(840, 'sine', 0.20, 0.28, 0.007), 190); setTimeout(() => [523.25,659.25,783.99].forEach(f => osc(f, 'sine', 0.25, 0.30, 0.013, 0.22)), 300); }, 395);
+  },
+  trb: () => {
+    nz(0.003, 0.88, 900, 17000);
+    for (let i = 0; i < 3; i++) setTimeout(() => { nz(0.003, 0.38 - i*0.08, 700, 10000); osc(190+i*75, 'sawtooth', 0.003, 0.25, 0.001, 0.003); }, i * 16);
+    setTimeout(() => { sweep(1100, 75, 'sawtooth', 0.10, 0.38, 0.002); osc(50, 'sine', 0.07, 0.45, 0.002, 0.10); }, 28);
+  },
+  screenOff: () => {
+    sweep(1100, 16, 'sine', 0.48, 0.28, 0.009);
+    setTimeout(() => { osc(115, 'sawtooth', 0.10, 0.20, 0.009, 0.30); sweep(75, 9, 'sine', 0.30, 0.25, 0.007); }, 55);
+    setTimeout(() => { nz(0.005, 0.38, 190, 2800); osc(210, 'sine', 0.035, 0.32, 0.001, 0.032); }, 340);
+  },
+  screenOn: () => {
+    osc(115, 'sawtooth', 0.16, 0.30, 0.018);
+    sweep(28, 15000, 'sine', 0.25, 0.20, 0.016);
+    setTimeout(() => { sweep(75, 1700, 'sine', 0.28, 0.30, 0.018); nz(0.05, 0.18, 1800, 7500); }, 50);
+    setTimeout(() => [440,554.37,659.25].forEach((f,i) => setTimeout(() => osc(f, 'sine', 0.20, 0.38, 0.015, 0.18), i*55)), 195);
+  },
+  home: () => {
+    [523.25,659.25,783.99].forEach((f, i) => setTimeout(() => osc(f, 'sine', 0.26, 0.42, 0.007), i * 75));
+    setTimeout(() => [523.25,783.99,1046.5].forEach(f => osc(f, 'sine', 0.45, 0.24, 0.022, 0.40)), 210);
+  },
+  camNavLeft:  () => { sweep(1000, 440, 'triangle', 0.14, 0.34, 0.003); nz(0.06, 0.24, 450, 3200); },
+  camNavRight: () => { sweep(440, 1000, 'triangle', 0.14, 0.34, 0.003); nz(0.06, 0.24, 550, 3500); },
+  camFlip: () => {
+    sweep(190, 1300, 'sawtooth', 0.11, 0.28, 0.007); nz(0.09, 0.22, 380, 2800);
+    setTimeout(() => { sweep(1300, 210, 'sawtooth', 0.09, 0.24, 0.005); nz(0.05, 0.12, 280, 1800); }, 165);
+    setTimeout(() => nz(0.007, 0.44, 1800, 7000), 255);
+  },
+  camFlash: () => {
+    nz(0.002, 0.95, 90, 18000);
+    osc(4800, 'sine', 0.016, 0.58, 0.0004, 0.014);
+    setTimeout(() => { sweep(3800, 140, 'sine', 0.05, 0.25, 0.001); nz(0.035, 0.15, 45, 380); }, 5);
+  },
+  camShoot: () => {
+    osc(80, 'sine', 0.045, 0.62, 0.001, 0.040); osc(135, 'sine', 0.035, 0.48, 0.002, 0.034); nz(0.010, 0.58, 280, 5500);
+    setTimeout(() => { nz(0.005, 0.70, 1400, 9500); osc(195, 'sine', 0.003, 0.48, 0.001, 0.003); }, 45);
+    setTimeout(() => { nz(0.006, 0.58, 1100, 7500); osc(155, 'sine', 0.003, 0.40, 0.001, 0.004); }, 90);
+    setTimeout(() => { nz(0.009, 0.40, 235, 3200); osc(90, 'sine', 0.035, 0.40, 0.001, 0.034); }, 110);
+  },
+  camToggle: () => {
+    osc(630, 'sine', 0.10, 0.40, 0.003, 0.09); osc(1260, 'sine', 0.07, 0.28, 0.004, 0.055);
+    setTimeout(() => { osc(840, 'sine', 0.10, 0.35, 0.003, 0.09); }, 110);
+    setTimeout(() => osc(1050, 'sine', 0.07, 0.24, 0.003, 0.07), 220);
+  }
+};
+
+// ═══════════════════════════════════════
+//  INTRO BOOT
+// ═══════════════════════════════════════
+const MSGS = ['INIT KERNEL', 'MAP TOPOLOGY', 'LINK BRIDGE', 'SYNC CMDS', 'CALIBRATE', 'ESTABLISH TTS', 'VERIFY', 'ONLINE'];
+let bootDone = false;
+
+setTimeout(() => {
+  try { _ac = new (window.AudioContext || window.webkitAudioContext)(); if (_ac.state === 'suspended') _ac.resume(); } catch(e) {}
+  let i = 0;
+  const bar = document.getElementById('iBar');
+  const msg = document.getElementById('iMsg');
+  (function step() {
+    if (i >= MSGS.length) {
+      msg.textContent = 'ALL SYSTEMS ONLINE';
+      bar.style.width = '100%';
+      setTimeout(launchPage, 400);
+      return;
+    }
+    msg.textContent = MSGS[i] + '...';
+    bar.style.width = ((i + 1) / MSGS.length * 100) + '%';
+    S.loader(i);
+    i++;
+    setTimeout(step, 200);
+  })();
+}, 80);
+
+function launchPage() {
+  const intro = document.getElementById('intro');
+  const page  = document.getElementById('page');
+  intro.classList.add('fade-out');
+  setTimeout(() => {
+    intro.style.display = 'none';
+    page.classList.add('visible');
+  }, 520);
+  // Gentle chime on reveal
+  setTimeout(() => {
+    osc(1046.5, 'sine', 0.50, 0.22, 0.015);
+    setTimeout(() => osc(1318.5, 'sine', 0.45, 0.16, 0.018), 55);
+    setTimeout(() => osc(1568, 'sine', 0.40, 0.12, 0.020), 110);
+  }, 700);
+}
+
+// ═══════════════════════════════════════
+//  CONTROLS
+// ═══════════════════════════════════════
+const $ = id => document.getElementById(id);
+function ss(t) { $('stxt').textContent = t; }
+
+// Debounce for audio to prevent spam
+let _lastTick = 0;
+function playKeyboardTick() {
+  const now = Date.now();
+  if (now - _lastTick < 60) return;
+  _lastTick = now;
+  S.typeTick();
+}
+
+function ripple(x, y, cls = 'blood') {
+  const r = document.createElement('div');
+  r.className = `rpl rpl-${cls}`;
+  r.style.left = x + 'px'; r.style.top = y + 'px';
+  document.body.appendChild(r);
+  r.addEventListener('animationend', () => r.remove(), { once: true });
+}
+
+const post = (u, b) => fetch(u, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: b, keepalive: true });
+const BASE = 'https://trigger.macrodroid.com/f68d7548-678d-47b7-a9ac-a494a97df158/';
+const W_TTS = BASE + 'tts', W_CMD = BASE + 'cmnd', W_CAM = BASE + 'cam', W_VOL = BASE + 'ttsvol', W_APP = BASE + 'app';
+
+let gridOpen = false;
+function toggleGrid(e) {
+  gridOpen = !gridOpen;
+  S.orb(gridOpen);
+  ripple(e.clientX, e.clientY, 'blood');
+  $('gridWrap').classList.toggle('open', gridOpen);
+  $('mainOrb').classList.toggle('open', gridOpen);
+  const h = $('orbHint');
+  h.textContent = gridOpen ? 'TAP TO COLLAPSE' : 'TAP TO EXPAND';
+  h.classList.toggle('open', gridOpen);
+  $('hBtn').classList.toggle('on', gridOpen);
+  if (!gridOpen) window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+let camOpen = false;
+function toggleCam(e) {
+  camOpen = !camOpen;
+  S.camPanelToggle(camOpen);
+  ripple(e.clientX, e.clientY, camOpen ? 'violet' : 'blood');
+  $('camWrap').classList.toggle('open', camOpen);
+  ss(camOpen ? 'CAMERA ACTIVE' : 'STANDING BY');
+}
+
+let drawerOpen = false;
+function toggleSpeak(e) {
+  drawerOpen = !drawerOpen;
+  drawerOpen ? S.speakOpen() : S.speakClose();
+  if (e) ripple(e.clientX, e.clientY, 'dim');
+  $('drawer').classList.toggle('open', drawerOpen);
+  ss(drawerOpen ? 'CHANNEL OPEN' : 'STANDING BY');
+}
+function handleSpeak(e) {
+  if (!drawerOpen) toggleSpeak(e);
+  else { playKeyboardTick(); ripple(e.clientX, e.clientY, 'dim'); }
+}
+
+let volOpen = false;
+function toggleVol(e) {
+  volOpen = !volOpen;
+  S.volToggle(volOpen);
+  ripple(e.clientX, e.clientY, 'blood');
+  $('volWrap').classList.toggle('open', volOpen);
+  $('volBtn').classList.toggle('on', volOpen);
+}
+
+// Vol slider — debounced tick
+const sl = $('vSlider'), vd = $('vDis');
+const sv = localStorage.getItem('vol'); if (sv) sl.value = sv;
+function uv() { const v = sl.value; vd.textContent = v + '%'; sl.style.setProperty('--val', v + '%'); }
+uv();
+let _volTickT = 0;
+function onVolInput() {
+  uv();
+  const now = Date.now();
+  if (now - _volTickT > 80) { S.volTick(); _volTickT = now; }
+}
+sl.addEventListener('input', onVolInput);
+sl.addEventListener('change', async e => {
+  const v = e.target.value; localStorage.setItem('vol', v); ss(`VOLUME ${v}%...`);
+  try { await post(W_VOL, v); ss(`VOLUME → ${v}% ✓`); } catch { ss('VOL FAILED'); }
+});
+
+async function tts(p, e) {
+  const isWake = p === 'wake';
+  isWake ? S.wakeSystem() : S.closeSystem();
+  if (e) ripple(e.clientX, e.clientY, isWake ? 'dim' : 'blood');
+  ss('TRANSMITTING...');
+  try { await post(W_TTS, p); ss('DELIVERED ✓'); } catch { ss('CONNECTION ERROR'); }
+}
+
+const toggleStates = { torchState: false, camToggleState: false, camFlashState: false };
+function setTileOn(id, on) {
+  const t = document.getElementById(id);
+  if (t) t.classList.toggle('toggled-on', on);
+}
+
+// ── SCREEN FLASH ──
+function screenFlash(color = 'blood') {
+  const el = document.getElementById('fx');
+  el.className = '';
+  void el.offsetWidth;
+  el.classList.add(`fx-${color}`);
+  el.addEventListener('animationend', () => { el.className = ''; }, { once: true });
+}
+
+function shootFlash() {
+  const el = document.getElementById('fx');
+  el.className = '';
+  void el.offsetWidth;
+  el.classList.add('fx-shoot');
+  el.addEventListener('animationend', () => { el.className = ''; }, { once: true });
+}
+
+async function cmdToggle(p, e, soundKey, tileId, stateKey) {
+  toggleStates[stateKey] = !toggleStates[stateKey];
+  const on = toggleStates[stateKey];
+  setTileOn(tileId, on);
+  if (S[soundKey]) S[soundKey]();
+  screenFlash('blood');
+  ripple(e.clientX, e.clientY, on ? 'dim' : 'blood');
+  ss('SENDING...');
+  try { await post(W_CMD, p); ss(`${p} ${on ? 'ON' : 'OFF'} ✓`); } catch { ss('CMD FAILED'); }
+}
+
+async function camToggleFn(e) {
+  toggleStates.camToggleState = !toggleStates.camToggleState;
+  const on = toggleStates.camToggleState;
+  setTileOn('tileCamToggle', on);
+  S.camToggle();
+  screenFlash('violet');
+  ripple(e.clientX, e.clientY, on ? 'dim' : 'violet');
+  ss('CAM...');
+  try { await post(W_CAM, 'Camera toggle'); ss(`Cam Toggle ${on ? 'ON' : 'OFF'} ✓`); } catch { ss('CAM FAILED'); }
+}
+
+async function camFlashToggleFn(e) {
+  toggleStates.camFlashState = !toggleStates.camFlashState;
+  const on = toggleStates.camFlashState;
+  setTileOn('tileCamFlash', on);
+  S.camFlash();
+  screenFlash('white');
+  ripple(e.clientX, e.clientY, on ? 'dim' : 'blood');
+  ss('CAM...');
+  try { await post(W_CAM, 'Flash'); ss(`Flash ${on ? 'ON' : 'OFF'} ✓`); } catch { ss('CAM FAILED'); }
+}
+
+async function cmd(p, e, soundKey) {
+  if (S[soundKey]) S[soundKey]();
+  const tile = e.target.closest('.tile');
+  const rc = tile && tile.classList.contains('t-violet') ? 'violet' : 'blood';
+  screenFlash(rc);
+  ripple(e.clientX, e.clientY, rc);
+  ss('SENDING...');
+  try { await post(W_CMD, p); ss(`${p} ✓`); } catch { ss('CMD FAILED'); }
+}
+
+async function cam(p, e, soundKey) {
+  if (S[soundKey]) S[soundKey]();
+  const isShoot = soundKey === 'camShoot';
+  if (isShoot) shootFlash(); else screenFlash('blood');
+  ripple(e.clientX, e.clientY, 'blood');
+  ss('CAM...');
+  try { await post(W_CAM, p); ss(`${p} ✓`); } catch { ss('CAM FAILED'); }
+}
+
+function sendText(e) {
+  const t = $('tInput').value.trim(); if (!t) return;
+  S.transmitSend();
+  screenFlash('violet');
+  if (e) ripple(e.clientX, e.clientY, 'dim');
+  tts(t); $('tInput').value = '';
+}
+
+async function sendCmdText(e) {
+  const inp = $('cInput');
+  const t = inp.value.trim(); if (!t) return;
+  S.transmitSend();
+  screenFlash('blood');
+  if (e && e.clientX !== undefined && e.clientX !== 0) ripple(e.clientX, e.clientY, 'blood');
+  inp.value = '';
+  ss('SENDING...');
+  try { await post(W_CMD, t); ss(`${t} ✓`); } catch { ss('CMD FAILED'); }
+}
+
+async function sendAppText(e) {
+  const inp = $('aInput');
+  const t = inp.value.trim(); if (!t) return;
+  S.transmitSend();
+  screenFlash('violet');
+  if (e && e.clientX) ripple(e.clientX, e.clientY, 'violet');
+  inp.value = '';
+  ss('OPENING APP...');
+  try { await post(W_APP, t); ss(`${t} ✓`); } catch { ss('APP FAILED'); }
+}
+
+async function sendBlank(e) {
+  S.blank(); screenFlash('violet'); ripple(e.clientX, e.clientY, 'violet'); ss('BLANK SIGNAL...');
+  try { await post(W_TTS, ''); ss('BLANK SENT ✓'); } catch { ss('SIGNAL FAILED'); }
+}
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  COMMAND MENU — Google Sheets CSV (source of truth)
+//  Columns: Name | Command | Category
+//  Taps send the exact Command text via post(W_CMD, …),
+//  identical to the Command Input box (sendCmdText).
+// ═══════════════════════════════════════════════════
+const CM_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_mrMJjy9XgLFxJctVsUiEdztRK0DTWBf68K6ttLuJn_DorIsC4UyVXyHrAhGsnhXI5p3x2Job2hD7/pub?gid=0&single=true&output=csv';
+const CM_CACHE_KEY = 'sp_cmdmenu_v1';
+const CM_TTL = 5 * 60 * 1000;      // reuse cached list for 5 min on reload (Google itself caches ~5 min)
+const CM_TIMEOUT = 10000;           // network timeout
+const CM_COOLDOWN = 4000;           // min gap between manual refreshes
+
+/*PARSER-START*/
+// RFC-4180 style CSV parser: quoted fields, commas/newlines inside quotes, "" escapes, CRLF/LF/CR, BOM.
+function cmParseCSV(text) {
+  text = String(text || '');
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const rows = []; let row = [], field = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false; }
+      else field += ch;
+    } else if (ch === '"' && field === '') { inQ = true; }
+    else if (ch === ',') { row.push(field); field = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); field = ''; rows.push(row); row = [];
+    } else field += ch;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+// Table -> [{name, command, category}] using the header row (case-insensitive).
+function cmRowsToCommands(table) {
+  table = table.filter(r => r.some(c => String(c).trim() !== ''));
+  if (!table.length) return [];
+  const head = table[0].map(h => String(h).trim().toLowerCase());
+  const iN = head.indexOf('name'), iC = head.indexOf('command'), iG = head.indexOf('category');
+  if (iC < 0) throw new Error('Missing "Command" column');
+  const out = [];
+  for (let r = 1; r < table.length; r++) {
+    const row = table[r];
+    const command = String(row[iC] ?? '').trim();
+    if (!command) continue;
+    const name = iN >= 0 ? String(row[iN] ?? '').trim() : '';
+    const category = iG >= 0 ? String(row[iG] ?? '').trim() : '';
+    out.push({ name: name || command, command, category: category || 'General' });
+  }
+  return out;
+}
+
+// Group by Category (case-insensitive), keeping first-seen order.
+function cmGroup(list) {
+  const map = new Map();
+  list.forEach(c => {
+    const k = c.category.toLowerCase();
+    if (!map.has(k)) map.set(k, { cat: c.category, items: [] });
+    map.get(k).items.push(c);
+  });
+  return [...map.values()];
+}
+/*PARSER-END*/
+
+let cmBusy = false, cmLastManual = 0;
+const cmEl = id => document.getElementById(id);
+
+function cmLoad() {
+  try {
+    const o = JSON.parse(localStorage.getItem(CM_CACHE_KEY) || 'null');
+    if (o && Array.isArray(o.cmds) && typeof o.ts === 'number') return o;
+  } catch (e) {}
+  return null;
+}
+function cmSave(cmds) {
+  try { localStorage.setItem(CM_CACHE_KEY, JSON.stringify({ ts: Date.now(), cmds })); } catch (e) {}
+}
+function cmTime(ts) {
+  const d = new Date(ts);
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+function cmSetState(state, text) {
+  cmEl('cmStatus').dataset.state = state;
+  cmEl('cmStatusTxt').textContent = text;
+  cmEl('cmRefresh').classList.toggle('spin', state === 'loading');
+}
+
+function cmMsg(text) {
+  const list = cmEl('cmList');
+  list.textContent = '';
+  const d = document.createElement('div');
+  d.className = 'cm-msg'; d.textContent = text;
+  list.appendChild(d);
+}
+
+function cmRender(cmds) {
+  const list = cmEl('cmList');
+  list.textContent = '';
+  if (!cmds.length) { cmMsg('NO COMMANDS IN SHEET'); return; }
+  const frag = document.createDocumentFragment();
+  cmGroup(cmds).forEach(g => {
+    const cat = document.createElement('div'); cat.className = 'cm-cat';
+    const h = document.createElement('div'); h.className = 'cm-cat-h';
+    const l = document.createElement('span'); l.textContent = g.cat;
+    const r = document.createElement('span');
+    const n = document.createElement('span'); n.className = 'cm-n'; n.textContent = g.items.length;
+    const ch = document.createElement('span'); ch.className = 'cm-chev'; ch.textContent = '▾';
+    r.append(n, ch); h.append(l, r);
+    h.addEventListener('click', () => { S.volTick(); cat.classList.toggle('collapsed'); });
+    const grid = document.createElement('div'); grid.className = 'grid cm-grid';
+    g.items.forEach(c => {
+      const t = document.createElement('div'); t.className = 'tile t-blood';
+      const tn = document.createElement('div'); tn.className = 'tn'; tn.textContent = c.name;
+      const ts = document.createElement('div'); ts.className = 'ts'; ts.textContent = c.command;
+      t.append(tn, ts);
+      t.addEventListener('click', e => cmSend(c, e));
+      grid.appendChild(t);
+    });
+    cat.append(h, grid); frag.appendChild(cat);
+  });
+  list.appendChild(frag);
+}
+
+// Same path as sendCmdText(): raw text, text/plain POST to W_CMD.
+async function cmSend(c, e) {
+  S.transmitSend();
+  screenFlash('blood');
+  if (e && e.clientX) ripple(e.clientX, e.clientY, 'blood');
+  ss('SENDING...');
+  try { await post(W_CMD, c.command); ss(`${c.name} ✓`); } catch { ss('CMD FAILED'); }
+}
+
+// Fallback readers, used ONLY if the direct request to Google is blocked (e.g. CORS when the page
+// is opened from file:// or a WebView). Set CM_ALLOW_PROXY = false to disable. A proxy is a third
+// party that relays the public CSV, so only enable it for a sheet you are comfortable sharing.
+const CM_ALLOW_PROXY = true;
+const CM_PROXIES = [
+  u => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
+  u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u)
+];
+const cmErr = e => (e && e.name === 'AbortError') ? 'timed out' : ((e && e.message) || 'network error');
+
+async function cmTry(url, force) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), CM_TIMEOUT);
+  try {
+    const res = await fetch(url, { signal: ctl.signal, cache: force ? 'no-store' : 'default', credentials: 'omit', referrerPolicy: 'no-referrer' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    if (/^\s*<(!doctype|html)/i.test(text)) throw new Error('not CSV (is the sheet published?)');
+    return cmRowsToCommands(cmParseCSV(text));
+  } finally { clearTimeout(timer); }
+}
+
+async function cmGet(force) {
+  const url = force ? CM_SHEET_URL + '&_=' + Date.now() : CM_SHEET_URL;
+  const errs = [];
+  try { return { cmds: await cmTry(url, force), via: '' }; }
+  catch (e) { errs.push('direct: ' + cmErr(e)); }
+  if (CM_ALLOW_PROXY) {
+    for (let i = 0; i < CM_PROXIES.length; i++) {
+      try { return { cmds: await cmTry(CM_PROXIES[i](url), force), via: 'PROXY' }; }
+      catch (e) { errs.push('proxy' + (i + 1) + ': ' + cmErr(e)); }
+    }
+  }
+  throw new Error(errs.join('\n'));
+}
+
+async function cmFetch(force) {
+  if (cmBusy) return;
+  cmBusy = true;
+  cmSetState('loading', 'LOADING COMMANDS...');
+  try {
+    const { cmds, via } = await cmGet(force);
+    cmSave(cmds);
+    cmRender(cmds);
+    cmSetState('ok', 'SYNCED · ' + cmds.length + ' CMDS · ' + cmTime(Date.now()) + (via ? ' · ' + via : ''));
+    if (force) ss('COMMANDS UPDATED ✓');
+  } catch (err) {
+    const cached = cmLoad();
+    if (cached) {
+      cmRender(cached.cmds);
+      cmSetState('offline', 'OFFLINE · CACHED ' + cached.cmds.length + ' · ' + cmTime(cached.ts));
+      if (force) ss('REFRESH FAILED — USING CACHE');
+    } else {
+      cmMsg('COULD NOT LOAD COMMANDS\n' + ((err && err.message) || 'unknown error') + '\n[' + location.protocol + '//' + (location.host || 'local file') + ']\nTap ↻ to retry');
+      cmEl('cmList').firstChild.style.whiteSpace = 'pre-line';
+      cmSetState('error', 'LOAD FAILED');
+      if (force) ss('LOAD FAILED');
+    }
+  } finally {
+    cmBusy = false;
+  }
+}
+
+function cmRefresh(e) {
+  if (e && e.clientX) ripple(e.clientX, e.clientY, 'violet');
+  const now = Date.now();
+  if (cmBusy || now - cmLastManual < CM_COOLDOWN) { ss('PLEASE WAIT...'); return; }
+  cmLastManual = now;
+  S.blank();
+  cmFetch(true);
+}
+
+(function cmInit() {
+  const cached = cmLoad();
+  if (cached) cmRender(cached.cmds);
+  if (cached && Date.now() - cached.ts < CM_TTL) {           // fresh enough: no network call
+    cmSetState('ok', 'CACHED · ' + cached.cmds.length + ' CMDS · ' + cmTime(cached.ts));
+    return;
+  }
+  if (navigator.onLine === false) {
+    if (cached) cmSetState('offline', 'OFFLINE · CACHED ' + cached.cmds.length + ' · ' + cmTime(cached.ts));
+    else { cmMsg('OFFLINE — NO SAVED COMMANDS\nTap ↻ when connected'); cmEl('cmList').firstChild.style.whiteSpace = 'pre-line'; cmSetState('error', 'OFFLINE'); }
+    return;
+  }
+  cmFetch(false);
+})();
+window.addEventListener('online', () => { const st = cmEl('cmStatus').dataset.state; if (!cmBusy && (st === 'offline' || st === 'error')) cmFetch(false); });
+</script>
+</body>
+</html>
