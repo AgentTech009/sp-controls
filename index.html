@@ -637,7 +637,7 @@ textarea:focus { border-color: rgba(192,57,43,0.28); }
 .cm-refresh { width:34px; height:34px; font-size:16px; }
 .cm-refresh.spin { animation:cm-spin 0.8s linear infinite; }
 @keyframes cm-spin { to { transform:rotate(360deg); } }
-.cm-msg { margin-top:10px; padding:12px; border-radius:var(--rsm); background:rgba(0,0,0,0.5); border:1px solid rgba(192,57,43,0.08); font-family:var(--mono); font-size:9px; letter-spacing:1.5px; color:var(--dimmer); text-align:center; line-height:1.6; }
+.cm-msg { overflow-wrap:anywhere; margin-top:10px; padding:12px; border-radius:var(--rsm); background:rgba(0,0,0,0.5); border:1px solid rgba(192,57,43,0.08); font-family:var(--mono); font-size:9px; letter-spacing:1.5px; color:var(--dimmer); text-align:center; line-height:1.6; }
 .cm-cat { margin-top:8px; }
 .cm-cat-h {
   display:flex; align-items:center; justify-content:space-between; padding:8px 2px 7px; cursor:pointer;
@@ -651,6 +651,16 @@ textarea:focus { border-color: rgba(192,57,43,0.28); }
 .cm-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
 .cm-grid .tile { will-change:auto; padding:11px 10px; }
 .cm-grid .tn, .cm-grid .ts { overflow-wrap:anywhere; }
+
+/* ── PACKAGE LOOKUP LINK ── */
+.pkg-link {
+  display: inline-block; margin-top: 9px; padding: 2px 2px;
+  font-family: var(--mono); font-size: 8px; letter-spacing: 2.5px; text-transform: uppercase;
+  color: rgba(192,57,43,0.55); text-decoration: none;
+  transition: opacity 0.08s ease, color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pkg-link:active { opacity: 0.6; color: var(--blood2); }
 
 /* ── STATUS BAR ── */
 #sbar {
@@ -908,6 +918,7 @@ textarea:focus { border-color: rgba(192,57,43,0.28); }
         <input type="text" id="aInput" placeholder="App name..." autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="send" oninput="playKeyboardTick()" onkeydown="if(event.key==='Enter')sendAppText(event)">
         <button class="cmd-send" onclick="sendAppText(event)">➤</button>
       </div>
+      <a class="pkg-link" href="https://www.appblocklist.com/tools/package-name-lookup.php" target="_blank" rel="noopener noreferrer">Find Package Name ↗</a>
     </div>
 
     <!-- COMMAND MENU (loaded from Google Sheets CSV) -->
@@ -1588,6 +1599,30 @@ const CM_PROXIES = [
   u => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
   u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u)
 ];
+// OPTIONAL: Google Apps Script web-app URL (ends in /exec). Works even when the page is opened from
+// local storage (content:// or file://), because it loads via a <script> tag instead of fetch (no CORS).
+// Setup steps are in the chat reply. Leave '' to use the published CSV link above.
+const CM_JSONP_URL = '';
+
+function cmJsonp(url) {
+  return new Promise((resolve, reject) => {
+    const name = '__cm_cb_' + Date.now().toString(36) + Math.floor(Math.random() * 1e6);
+    const sc = document.createElement('script');
+    let done = false;
+    const finish = (fn, v) => {
+      if (done) return; done = true;
+      clearTimeout(timer); try { delete window[name]; } catch (e) { window[name] = undefined; }
+      if (sc.remove) sc.remove();
+      fn(v);
+    };
+    const timer = setTimeout(() => finish(reject, new Error('timed out')), CM_TIMEOUT);
+    window[name] = data => Array.isArray(data) ? finish(resolve, data) : finish(reject, new Error('bad script response'));
+    sc.onerror = () => finish(reject, new Error('script blocked/failed'));
+    sc.src = url + (url.indexOf('?') < 0 ? '?' : '&') + 'callback=' + name + '&_=' + Date.now();
+    (document.head || document.documentElement).appendChild(sc);
+  });
+}
+
 const cmErr = e => (e && e.name === 'AbortError') ? 'timed out' : ((e && e.message) || 'network error');
 
 async function cmTry(url, force) {
@@ -1605,6 +1640,10 @@ async function cmTry(url, force) {
 async function cmGet(force) {
   const url = force ? CM_SHEET_URL + '&_=' + Date.now() : CM_SHEET_URL;
   const errs = [];
+  if (CM_JSONP_URL) {
+    try { return { cmds: cmRowsToCommands(await cmJsonp(CM_JSONP_URL)), via: '' }; }
+    catch (e) { errs.push('script: ' + cmErr(e)); }
+  }
   try { return { cmds: await cmTry(url, force), via: '' }; }
   catch (e) { errs.push('direct: ' + cmErr(e)); }
   if (CM_ALLOW_PROXY) {
@@ -1633,7 +1672,7 @@ async function cmFetch(force) {
       cmSetState('offline', 'OFFLINE · CACHED ' + cached.cmds.length + ' · ' + cmTime(cached.ts));
       if (force) ss('REFRESH FAILED — USING CACHE');
     } else {
-      cmMsg('COULD NOT LOAD COMMANDS\n' + ((err && err.message) || 'unknown error') + '\n[' + location.protocol + '//' + (location.host || 'local file') + ']\nTap ↻ to retry');
+      cmMsg('COULD NOT LOAD COMMANDS\n' + ((err && err.message) || 'unknown error') + '\n[opened via ' + location.protocol + ']' + (/^https?:$/.test(location.protocol) ? '' : '\nLocal file pages are blocked by the browser. Host the file over https or set CM_JSONP_URL.') + '\nTap ↻ to retry');
       cmEl('cmList').firstChild.style.whiteSpace = 'pre-line';
       cmSetState('error', 'LOAD FAILED');
       if (force) ss('LOAD FAILED');
